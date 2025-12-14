@@ -14,10 +14,8 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Read auth token
-        id: auth
         run: |
-          TOKEN=$(cat auth.txt | tr -d '\n')
-          echo "ZAP_AUTH=$TOKEN" >> $GITHUB_ENV
+          echo "ZAP_AUTH=$(cat auth.txt | tr -d '\n')" >> $GITHUB_ENV
 
       - name: Run ZAP API Scan (non-blocking)
         run: |
@@ -27,7 +25,7 @@ jobs:
             zap-api-scan.py \
               -t /zap/wrk/properties_zap.json \
               -f openapi \
-              -r /zap/wrk/report.html \
+              -r report.html \
               -z "
                 -config replacer.full_list(0).description=auth
                 -config replacer.full_list(0).enabled=true
