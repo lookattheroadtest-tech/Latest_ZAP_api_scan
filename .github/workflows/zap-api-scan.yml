@@ -10,16 +10,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Read auth token
-        run: |
-          echo "ZAP_AUTH=$(cat auth.txt | tr -d '\n')" >> $GITHUB_ENV
-
-      - name: Run ZAP API Scan (non-blocking)
+      # 2. Run ZAP API Scan (AUTHENTICATED)
+      - name: Run OWASP ZAP API Scan
         run: |
           docker run --rm \
+            --user root \
             -v ${{ github.workspace }}:/zap/wrk \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-api-scan.py \
@@ -31,12 +30,13 @@ jobs:
                 -config replacer.full_list(0).enabled=true
                 -config replacer.full_list(0).matchtype=REQ_HEADER
                 -config replacer.full_list(0).matchstr=Authorization
-                -config replacer.full_list(0).replacement=${ZAP_AUTH}
+                -config replacer.full_list(0).replacement=$(cat /zap/wrk/auth.txt)
 
                 -config scanner.attackStrength=HIGH
                 -config scanner.alertThreshold=LOW
               " || true
 
+      # 3. Upload report.html as artifact
       - name: Upload ZAP HTML Report
         uses: actions/upload-artifact@v4
         with:
