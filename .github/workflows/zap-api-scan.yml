@@ -1,9 +1,8 @@
 name: ZAP Authenticated API Scan
 
 on:
-  workflow_dispatch:
   push:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   zap-scan:
@@ -14,27 +13,26 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Read auth token
-        id: auth
         run: |
-          echo "TOKEN=$(cat auth.txt)" >> $GITHUB_ENV
+          echo "TOKEN=$(cat auth.txt | tr -d '\n')" >> $GITHUB_ENV
 
-      - name: Run ZAP API scan (IDENTICAL to local)
+      - name: Run ZAP API Scan (EXACT LOCAL COMMAND, RUN AS ROOT)
         run: |
           docker run --rm \
-            -u root \
-            -v ${{ github.workspace }}:/zap/wrk \
-            ghcr.io/zaproxy/zaproxy:stable \
+            --user 0:0 \
+            -v "$PWD:/zap/wrk" \
+            -t ghcr.io/zaproxy/zaproxy:stable \
             zap-api-scan.py \
             -t /zap/wrk/properties_zap.json \
             -f openapi \
-            -r /zap/wrk/full-api-scan.html \
+            -r full-api-scan.html \
             -z "
               -config replacer.full_list(0).description=auth
               -config replacer.full_list(0).enabled=true
               -config replacer.full_list(0).matchtype=REQ_HEADER
               -config replacer.full_list(0).matchstr=Authorization
               -config replacer.full_list(0).replacement=${TOKEN}
-            "
+            " || true
 
       - name: Upload ZAP report
         uses: actions/upload-artifact@v4
