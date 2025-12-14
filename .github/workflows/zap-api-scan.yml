@@ -11,26 +11,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # — Checkout your repository
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # — Read auth token and set as env variable
+      - name: Fix workspace permissions
+        run: |
+          chmod -R 777 ${{ github.workspace }}
+
       - name: Load auth token
         run: |
-          RAW_TOKEN=$(cat auth.txt | tr -d '\n')
-          echo "ZAP_AUTH=Bearer $RAW_TOKEN" >> $GITHUB_ENV
+          TOKEN=$(cat auth.txt | tr -d '\n')
+          echo "ZAP_AUTH=Bearer $TOKEN" >> $GITHUB_ENV
 
-      # — Run ZAP API Scan
-      - name: Run ZAP API scan
+      - name: Run ZAP API Scan
         run: |
           docker run --rm \
+            -u 0 \
             -v "${{ github.workspace }}:/zap/wrk" \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-api-scan.py \
             -t /zap/wrk/properties_zap.json \
             -f openapi \
-            -r report.html \
+            -r /zap/wrk/report.html \
             -z "
               -config replacer.full_list(0).description=auth
               -config replacer.full_list(0).enabled=true
@@ -42,7 +44,6 @@ jobs:
               -config scanner.alertThreshold=LOW
             "
 
-      # — Upload HTML report as artifact
       - name: Upload ZAP Report
         uses: actions/upload-artifact@v4
         with:
